@@ -1,58 +1,38 @@
-# Файл - точка входа бота
+from aiogram.types import ReplyKeyboardRemove, \
+    ReplyKeyboardMarkup, KeyboardButton, \
+    InlineKeyboardMarkup, InlineKeyboardButton
 
-from logging import basicConfig, INFO
-from aiogram import Bot, Dispatcher, executor
+kb = [
+        [
+            KeyboardButton(text="Размер стипендий🙈"),
+            KeyboardButton(text="Стоимость аренды в общежитиях🙉"),
+            KeyboardButton(text="Цена на хлеб 'Прибрежный' в Фрэше🙊"),
+            KeyboardButton(text="Папич"),
+            KeyboardButton(text="➡")
+        ],
+        [
+            KeyboardButton(text="⬅")
+        ],
+    ]
 
-import config
-from handlers import user
+kb_inline = [
+        [
+            InlineKeyboardButton(text="Артас, его величество",
+                                 url="https://www.youtube.com/c/SpitefulDick"),
+            InlineKeyboardButton(text="Лучшее с папичем",
+                                 url="https://www.youtube.com/c/%D0%9B%D1%83%D1%87%D1%88%D0%B5%D0%B5%D1%81%D0%9F%D0%B0%D0%BF%D0%B8%D1%87%D0%B5%D0%BC"),
+            InlineKeyboardButton(text="Рофланы Папича",
+                                 url="https://www.youtube.com/c/%D0%A0%D0%BE%D1%84%D0%BB%D0%B0%D0%BD%D1%8B%D0%9F%D0%B0%D0%BF%D0%B8%D1%87%D0%B0/featured")
+        ],
+    ]
 
+keyboard_reply_first = ReplyKeyboardMarkup(resize_keyboard=True).add(kb[0][0]).\
+                                                                 add(kb[0][1]).\
+                                                                 add(kb[0][2]).\
+                                                                 add(kb[0][3]).\
+                                                                 add(kb[0][4])
+keyboard_reply_second = ReplyKeyboardMarkup(resize_keyboard=True).add(kb[1][0])
 
-bot = Bot(token=config.API_TOKEN)
-dp = Dispatcher(bot)
-
-# Включение логирования
-basicConfig(level=INFO)
-
-
-async def on_startup(_):
-    """ Функция, срабатывающая при старте бота """
-    pass
-
-def main():
-    """ Точка входа """
-    user.register_handlers(dp)  # Включаем обработчики из файла user
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
-
-button_hi = KeyboardButton('Здарова, очередняра! 👋', callback_data='buttonhi')
-
-Arthas = InlineKeyboardMarkup().add(InlineKeyboardButton("Плюс мораль", url="https://www.youtube.com/c/SpitefulDick"))
-set_button_inline = InlineKeyboardMarkup().add(button_hi)
-
-@dp.message_handler(commands=['start'])
-async def process_start_command(message: types.Message):
-    await message.reply("Привет!\nНапиши мне что-нибудь!", reply_markup = set_button_inline)
-
-@dp.callback_query_handler(lambda c: c.data == 'buttonhi')
-async def process_callback_button1(callback_query: types.CallbackQuery):
-    await bot.answer_callback_query(callback_query.id)
-    await bot.send_message(callback_query.from_user.id, 'Ротик закрыт, а животик то урчит...', reply_markup = Arthas)
-
-
-@dp.message_handler(commands=['help'])
-async def process_help_command(message: types.Message):
-    await message.reply("Напиши мне что-нибудь, и я отправлю этот текст тебе в ответ!")
-
-
-@dp.message_handler(commands=['zxc'])
-async def process_zxc_command(msg):
-    for i in range(1000,13,-7):
-        await bot.send_message(msg.from_user.id, str(i) + " - 7 = " + str(i-7))
-        await asyncio.sleep(0.2)
-
-
-@dp.message_handler()
-async def echo_message(msg: types.Message):
-    await bot.send_message(msg.from_user.id, msg.text)
-    
-if __name__ == "__main__":
-    main()
+keyboard_inline_first = InlineKeyboardMarkup(resize_keyboard=True).add(kb_inline[0][0]).\
+                                                                   add(kb_inline[0][1]).\
+                                                                   add(kb_inline[0][2])
