@@ -1,47 +1,76 @@
-import sqlite3
+import aiosqlite
 
-# Открываем базу данных
-con = sqlite3.connect("bot.db")
-cur = con.cursor()
+# TODO сделать вывод соответсвующего сообщения, если вопросов нет
+# TODO добавить ограничения в длине строк
+# TODO добавить отмену ввода в FSM
+# TODO проверить все на await
 
-
-def init():
+async def init():
     """ Функция создания новой таблицы (инициализации), если она еще не была создана """
+    global con
+    global cur
 
-    con.execute(
+    # Открываем базу данных
+    con = await aiosqlite.connect("bot.db")
+    cur = await con.cursor()
+
+    await con.execute(
         """CREATE TABLE IF NOT EXISTS questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question_title TEXT NOT NULL CHECK(question_title != ''),
-            question_description TEXT NOT NULL CHECK(question_description != '')
-        )    
+            category_title VARHCAR(64) NOT NULL,
+            question_title VARHCAR(64) UNIQUE NOT NULL,
+            question_description VARHCAR(4096) NOT NULL,
+
+            FOREIGN KEY(category_title) REFERENCES categories (category_title) ON DELETE CASCADE
+        )
         """
     )
 
-    con.commit()
+    await con.execute(
+        """CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category_title VARHCAR(64) UNIQUE NOT NULL
+        )
+        """
+    )
 
-def fetch_all_questions() -> list:
-    """ Функция получения всех вопросов из БД """
-    cur.execute(""" SELECT * FROM questions """)
-    # Получаем СПИСОК кортежей с данными из таблицы вида
-    # [(1, вопрос1, описание1), (2, вопрос2, описание2), ...]
-    questions = cur.fetchall()
+    await con.commit()
+
+async def fetch_all_categories() -> list:
+    """ Функция получения всех категорий """
+    await cur.execute("""SELECT * FROM categories""")
+    categories = await cur.fetchall()
+
+    return categories
+
+async def add_category(category_title: str) -> None:
+    """ Функция добавления новой категории """
+    await cur.execute("""INSERT INTO categories (category_title) VALUES (?)""", (category_title, ))
+    await con.commit()
+
+async def fetch_one_question_by_id(question_id: int) -> set:
+    """ Функция получения вопроса по id """
+    await cur.execute(f"""SELECT * from questions WHERE id=?""", (question_id, ))
+    question = await cur.fetchone()
+
+    return question
+
+async def fetch_all_questions_by_category_title(category_title: str) -> list:
+    """ Функция получения всех вопросов, относящихся к определенной категории """
+    await cur.execute(f"""SELECT * from questions WHERE category_title=?""", (category_title, ))
+    questions = await cur.fetchall()
 
     return questions
 
-def fetch_one_question(question_id: int) -> set:
-    """ Функция получения вопроса по id из БД """
-    cur.execute(f""" SELECT * from questions WHERE id={question_id} """)
-    question = cur.fetchone()
-    return question
-
-def add_question(question_title: str, question_text: str) -> None:
-    """ Функция добавления нового вопроса в БД """
-    pass
-
-def correct_question(question_id: int, question_title: str, question_text: str) -> None:
-    """ Функция корректировки существующего вопроса в БД """
-    pass
-
-def delete_question(question_id: int) -> None:
-    """ Функция удаления вопроса из БД """
-    pass
+async def add_question(
+    category_title: str,
+    question_title: str,
+    question_description: str
+) -> None:
+    """ Функция добавления нового вопроса """
+    await cur.execute(
+        f"""INSERT INTO questions
+        (category_title, question_title, question_description)
+        VALUES (?, ?, ?)""", (category_title, question_title, question_description)
+    )
+    await con.commit()
