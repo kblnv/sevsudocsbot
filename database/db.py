@@ -1,9 +1,9 @@
 import aiosqlite
 
-# TODO сделать вывод соответсвующего сообщения, если вопросов нет
-# TODO добавить ограничения в длине строк
-# TODO добавить отмену ввода в FSM
 # TODO проверить все на await
+# TODO проверять все ошибки при операциях с БД (try, catch)
+# TODO поменять нэйминг FSM
+# TODO сделеать полнофункциональное меню (кнопки назад), админка
 
 async def init():
     """ Функция создания новой таблицы (инициализации), если она еще не была создана """
@@ -17,11 +17,11 @@ async def init():
     await con.execute(
         """CREATE TABLE IF NOT EXISTS questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category_title VARHCAR(64) NOT NULL,
-            question_title VARHCAR(64) UNIQUE NOT NULL,
-            question_description VARHCAR(4096) NOT NULL,
+            category_title VARCHAR(64) NOT NULL,
+            question_title VARCHAR(64) UNIQUE NOT NULL,
+            question_description VARCHAR(4096) NOT NULL,
 
-            FOREIGN KEY(category_title) REFERENCES categories (category_title) ON DELETE CASCADE
+            FOREIGN KEY (category_title) REFERENCES categories (category_title) ON DELETE CASCADE
         )
         """
     )
@@ -29,10 +29,13 @@ async def init():
     await con.execute(
         """CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category_title VARHCAR(64) UNIQUE NOT NULL
+            category_title VARCHAR(64) UNIQUE NOT NULL
         )
         """
     )
+    
+    # Чтобы нормально работало удаление категории (со всеми дочерними вопросами)
+    await con.execute("""PRAGMA foreign_keys = ON""")
 
     await con.commit()
 
@@ -48,16 +51,22 @@ async def add_category(category_title: str) -> None:
     await cur.execute("""INSERT INTO categories (category_title) VALUES (?)""", (category_title, ))
     await con.commit()
 
+async def fetch_all_questions() -> list:
+    await cur.execute("""SELECT * FROM questions""")
+    questions = await cur.fetchall()
+
+    return questions
+
 async def fetch_one_question_by_id(question_id: int) -> set:
     """ Функция получения вопроса по id """
-    await cur.execute(f"""SELECT * from questions WHERE id=?""", (question_id, ))
+    await cur.execute("""SELECT * from questions WHERE id=?""", (question_id, ))
     question = await cur.fetchone()
 
     return question
 
 async def fetch_all_questions_by_category_title(category_title: str) -> list:
     """ Функция получения всех вопросов, относящихся к определенной категории """
-    await cur.execute(f"""SELECT * from questions WHERE category_title=?""", (category_title, ))
+    await cur.execute("""SELECT * from questions WHERE category_title=?""", (category_title, ))
     questions = await cur.fetchall()
 
     return questions
@@ -69,8 +78,18 @@ async def add_question(
 ) -> None:
     """ Функция добавления нового вопроса """
     await cur.execute(
-        f"""INSERT INTO questions
+        """INSERT INTO questions
         (category_title, question_title, question_description)
         VALUES (?, ?, ?)""", (category_title, question_title, question_description)
     )
+    await con.commit()
+
+async def delete_category(category_title: str) -> None:
+    """ Функция удаления категории """
+    await cur.execute("""DELETE FROM categories WHERE category_title=?""", (category_title, ))
+    await con.commit()
+
+async def delete_question(question_title: str) -> None:
+    """ Функция удаления вопроса """
+    await cur.execute("""DELETE FROM questions WHERE question_title=?""", (question_title, ))
     await con.commit()
