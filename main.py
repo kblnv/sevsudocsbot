@@ -14,6 +14,7 @@ mem_storage = MemoryStorage()
 bot = Bot(token=config.API_TOKEN)
 dp = Dispatcher(bot, storage=mem_storage)
 
+
 # Включение логирования
 basicConfig(level=INFO)
 
@@ -26,7 +27,6 @@ async def on_shutdown(_) -> None:
     """ Функция, срабатывающая при завершении бота """
     await db.cur.close()
     await db.con.close()
-
 
 def main() -> None:
     """ Точка входа """

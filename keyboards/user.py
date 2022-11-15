@@ -7,12 +7,16 @@ def generate_inline_buttons(markup: InlineKeyboardMarkup, questions: list) -> No
         markup.add(
             InlineKeyboardButton(text=title, callback_data="btn_" + str(id))
         )
-
-def generate_keyboard_buttons(markup: ReplyKeyboardMarkup, categories: list) -> None:
+        
+def generate_categories_keyboard_buttons(markup: ReplyKeyboardMarkup, categories: list) -> None:
     """ Функия генерации кнопок категорий """
     for (_, title) in categories:
         markup.add(KeyboardButton(text=title))
 
+def generate_questions_keyboard_buttons(markup: ReplyKeyboardMarkup, questions: list) -> None:
+    """ Функия генерации кнопок вопросов """
+    for (_, _, title, _) in questions:
+        markup.add(KeyboardButton(text=title))
 
 # Клавиатура
 reply_keyboard = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)

@@ -9,13 +9,19 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from keyboards import user
 from database import db
 
-class CategoryFSM(StatesGroup):
+class CategoryAddFSM(StatesGroup):
     category_title = State()
 
-class QuestionFSM(StatesGroup):
+class CategoryDeleteFSM(StatesGroup):
+    category_title = State()
+
+class QuestionAddFSM(StatesGroup):
     category_title = State()
     question_title = State()
     question_description = State()
+
+class QuestionDeleteFSM(StatesGroup):
+    question_title = State()
 
 async def add_category_command_handler(message: types.Message):
     """ Обработчик комманды /add_category
@@ -25,7 +31,7 @@ async def add_category_command_handler(message: types.Message):
     markup.add(KeyboardButton("Отмена"))
 
     # Устанавливаем ожидание ввода названия категории
-    await CategoryFSM.category_title.set()
+    await CategoryAddFSM.category_title.set()
     await message.answer("Введите название категории:", reply_markup=markup)
 
 async def add_category_title_handler(message: types.Message, state: FSMContext):
@@ -42,25 +48,25 @@ async def add_question_command_handler(message: types.Message):
         Начало ввода данных для добавления вопроса
     """
     # Устанавливаем ожидание ввода названия категории
-    await QuestionFSM.category_title.set()
+    await QuestionAddFSM.category_title.set()
     # Показываем клавиатуру для выбора категории
     markup = ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
     categories = await db.fetch_all_categories()
-    user.generate_keyboard_buttons(markup, categories)
+    user.generate_categories_keyboard_buttons(markup, categories)
     markup.add(KeyboardButton("Отмена"))
 
     await message.answer("Выберите категорию для добавления вопроса:", reply_markup=markup)
 
 async def add_question_category_title_handler(message: types.Message, state: FSMContext):
-    """ Обработчик сообщения содержащее название вопроса """
+    """ Обработчик сообщения содержащее название категории """
     markup = ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
     markup.add(KeyboardButton("Отмена"))
     
     async with state.proxy() as data:
         # Сохраняем данные в оперативной памяти (с помощью специального объекта)
         data["question_category_title"] = message.text
-    # Устанавливаем ожидание ввода следующего поля класса QuestionFSM (название вопроса)
-    await QuestionFSM.next()
+    # Устанавливаем ожидание ввода следующего поля класса QuestionAddFSM (название вопроса)
+    await QuestionAddFSM.next()
     await message.answer("Введите название вопроса:", reply_markup=markup)
     
 async def add_question_title_handler(message: types.Message, state: FSMContext):
@@ -72,12 +78,12 @@ async def add_question_title_handler(message: types.Message, state: FSMContext):
         # Сохраняем данные в оперативной памяти (с помощью специального объекта)
         data["question_title"] = message.text
 
-    # Устанавливаем ожидание ввода следующего поля класса QuestionFSM (описание вопроса)
-    await QuestionFSM.next()
+    # Устанавливаем ожидание ввода следующего поля класса QuestionAddFSM (описание вопроса)
+    await QuestionAddFSM.next()
     await message.answer("Введите описание вопроса:", reply_markup=markup)
 
 async def add_question_description_handler(message: types.Message, state: FSMContext):
-    """ Обработчик сообщения содержащее название вопроса """
+    """ Обработчик сообщения содержащее описание вопроса """
     markup = ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
     markup.add(KeyboardButton("Отмена"))
     
@@ -95,6 +101,48 @@ async def add_question_description_handler(message: types.Message, state: FSMCon
     await state.finish()
     await message.answer("Вопрос успешно добавлен", reply_markup=user.reply_keyboard)
 
+async def delete_category_command_handler(message: types.Message):
+    """ Обработчик команды /delete_category """
+    # Устанавливаем ожидание ввода названия категории
+    await CategoryDeleteFSM.category_title.set()
+    # Показываем клавиатуру для выбора категории, которую требуется удалить
+    markup = ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
+    categories = await db.fetch_all_categories()
+    user.generate_categories_keyboard_buttons(markup, categories)
+    markup.add(KeyboardButton("Отмена"))
+
+    await message.answer("Выберите категорию, которую требуется удалить:", reply_markup=markup)
+
+async def delete_category_title_handler(message: types.Message, state: FSMContext):
+    """ Обработчик сообщения содержащее название категории """
+    async with state.proxy() as data:
+        data["category_title"] = message.text
+        await db.delete_category(data["category_title"])
+
+    await state.finish()
+    await message.answer("Категория успешно удалена", reply_markup=user.reply_keyboard)
+
+async def delete_question_command_handler(message: types.Message):
+    """ Обработчик команды /delete_question """
+    # Устанавливаем ожидание ввода названия вопроса
+    await QuestionDeleteFSM.question_title.set()
+    # Показываем клавиатуру для выбора категории, которую требуется удалить
+    markup = ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
+    questions = await db.fetch_all_questions()
+    user.generate_questions_keyboard_buttons(markup, questions)
+    markup.add(KeyboardButton("Отмена"))
+
+    await message.answer("Выберите вопрос, который требуется удалить:", reply_markup=markup)
+    
+async def delete_question_category_title_handler(message: types.Message, state: FSMContext):
+    """ Обработчик сообщения содержащее название вопроса """
+    async with state.proxy() as data:
+        data["question_title"] = message.text
+        await db.delete_question(data["question_title"])
+    
+    await state.finish()
+    await message.answer("Вопрос успешно удален", reply_markup=user.reply_keyboard)
+
 async def cancel_handler(message: types.Message, state: FSMContext):
     """ Обработчик отмены операции добавления """
     current_state = await state.get_state()
@@ -108,9 +156,15 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.register_message_handler(cancel_handler, Text(equals="Отмена"), state="*")
 
     dp.register_message_handler(add_category_command_handler, commands="add_category", state=None)
-    dp.register_message_handler(add_category_title_handler, state=CategoryFSM.category_title)
+    dp.register_message_handler(add_category_title_handler, state=CategoryAddFSM.category_title)
 
     dp.register_message_handler(add_question_command_handler, commands="add_question", state=None)
-    dp.register_message_handler(add_question_category_title_handler, state=QuestionFSM.category_title)
-    dp.register_message_handler(add_question_title_handler, state=QuestionFSM.question_title)
-    dp.register_message_handler(add_question_description_handler, state=QuestionFSM.question_description)
+    dp.register_message_handler(add_question_category_title_handler, state=QuestionAddFSM.category_title)
+    dp.register_message_handler(add_question_title_handler, state=QuestionAddFSM.question_title)
+    dp.register_message_handler(add_question_description_handler, state=QuestionAddFSM.question_description)
+
+    dp.register_message_handler(delete_category_command_handler, commands="delete_category", state=None)
+    dp.register_message_handler(delete_category_title_handler, state=CategoryDeleteFSM.category_title)
+
+    dp.register_message_handler(delete_question_command_handler, commands="delete_question", state=None)
+    dp.register_message_handler(delete_question_category_title_handler, state=QuestionDeleteFSM.question_title)

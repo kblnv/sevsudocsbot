@@ -2,7 +2,7 @@
 
 from aiogram import Dispatcher, types
 from aiogram.dispatcher.filters import Text, Filter
-from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 
 from keyboards import user
 from database import db
@@ -20,6 +20,9 @@ class IsCategory(Filter):
 
         return False
 
+async def back_command_handler(message: types.Message):
+    await message.answer(message.text, reply_markup=user.reply_keyboard) 
+
 async def questions_callback_handler(callback: types.CallbackQuery):
     """ Обработчик нажатия на инлайн кнопку """
     (_, id) = callback.data.split('_')
@@ -35,8 +38,13 @@ async def all_categories_command_handler(message: types.Message):
     """ Обработчик команды "Категории" """
     markup = ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
     categories = await db.fetch_all_categories()
-    user.generate_keyboard_buttons(markup, categories)
-    await message.answer(message.text, reply_markup=markup)
+    user.generate_categories_keyboard_buttons(markup, categories)
+    markup.add(KeyboardButton("Назад"))
+
+    if len(categories) > 0:
+        await message.answer(message.text, reply_markup=markup)
+    else:
+        await message.answer("Нет категорий")
 
 async def one_category_command_handler(message: types.Message):
     """ Обработчик нажатия на конкретную категорию """
@@ -64,3 +72,4 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.register_message_handler(all_categories_command_handler, Text(equals="Категории"))
     dp.register_message_handler(one_category_command_handler, IsCategory())
     dp.register_message_handler(settings_command_handler, Text(equals="Настройки"))
+    dp.register_message_handler(back_command_handler, Text(equals="Назад"))
