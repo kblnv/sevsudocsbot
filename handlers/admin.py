@@ -23,10 +23,26 @@ class QuestionAddFSM(StatesGroup):
 class QuestionDeleteFSM(StatesGroup):
     question_title = State()
 
+async def admin_command_handler(message: types.Message):
+    """ Обработчик команды /admin """
+    admins = await db.fetch_admin_id()
+    if (message.from_user.id,) not in admins:
+        await message.answer("Отказано в доступе", reply_markup=user.reply_keyboard)
+        return
+    await message.answer("Список доступных команд:\n"
+                         "/admin - Справочная информация о админ-командах\n"
+                         "/add_category - Добавление категории\n"
+                         "/add_question - Добавление вопроса к категории\n"
+                         "/delete_category - Удаление категории\n"
+                         "/delete_question - Удаление вопроса у категории")
 async def add_category_command_handler(message: types.Message):
-    """ Обработчик комманды /add_category
+    """ Обработчик команды /add_category
         Начало ввода данных для добавления категории
     """
+    admins = await db.fetch_admin_id()
+    if (message.from_user.id,) not in admins:
+        await message.answer("Отказано в доступе", reply_markup=user.reply_keyboard)
+        return
     markup = ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
     markup.add(KeyboardButton("Отмена"))
 
@@ -44,9 +60,13 @@ async def add_category_title_handler(message: types.Message, state: FSMContext):
     await message.answer("Категория успешно добавлена", reply_markup=user.reply_keyboard)
 
 async def add_question_command_handler(message: types.Message):
-    """ Обработчик комманды /add_question
+    """ Обработчик команды /add_question
         Начало ввода данных для добавления вопроса
     """
+    admins = await db.fetch_admin_id()
+    if (message.from_user.id,) not in admins:
+        await message.answer("Отказано в доступе", reply_markup=user.reply_keyboard)
+        return
     # Устанавливаем ожидание ввода названия категории
     await QuestionAddFSM.category_title.set()
     # Показываем клавиатуру для выбора категории
@@ -103,6 +123,10 @@ async def add_question_description_handler(message: types.Message, state: FSMCon
 
 async def delete_category_command_handler(message: types.Message):
     """ Обработчик команды /delete_category """
+    admins = await db.fetch_admin_id()
+    if (message.from_user.id,) not in admins:
+        await message.answer("Отказано в доступе", reply_markup=user.reply_keyboard)
+        return
     # Устанавливаем ожидание ввода названия категории
     await CategoryDeleteFSM.category_title.set()
     # Показываем клавиатуру для выбора категории, которую требуется удалить
@@ -124,6 +148,10 @@ async def delete_category_title_handler(message: types.Message, state: FSMContex
 
 async def delete_question_command_handler(message: types.Message):
     """ Обработчик команды /delete_question """
+    admins = await db.fetch_admin_id()
+    if (message.from_user.id,) not in admins:
+        await message.answer("Отказано в доступе", reply_markup=user.reply_keyboard)
+        return
     # Устанавливаем ожидание ввода названия вопроса
     await QuestionDeleteFSM.question_title.set()
     # Показываем клавиатуру для выбора категории, которую требуется удалить
@@ -145,6 +173,10 @@ async def delete_question_category_title_handler(message: types.Message, state: 
 
 async def cancel_handler(message: types.Message, state: FSMContext):
     """ Обработчик отмены операции добавления """
+    admins = await db.fetch_admin_id()
+    if (message.from_user.id,) not in admins:
+        await message.answer("Отказано в доступе", reply_markup=user.reply_keyboard)
+        return
     current_state = await state.get_state()
     if current_state == None:
         return
@@ -154,6 +186,8 @@ async def cancel_handler(message: types.Message, state: FSMContext):
 def register_handlers(dp: Dispatcher) -> None:
     """ Функция для регистрации всех обработчиков """
     dp.register_message_handler(cancel_handler, Text(equals="Отмена"), state="*")
+
+    dp.register_message_handler(admin_command_handler, commands="admin", state=None)
 
     dp.register_message_handler(add_category_command_handler, commands="add_category", state=None)
     dp.register_message_handler(add_category_title_handler, state=CategoryAddFSM.category_title)

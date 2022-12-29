@@ -9,7 +9,7 @@ from database import db
 
 class IsCategory(Filter):
     """ Кастомный фильтр
-        Определяет является ли сообщение названием категории
+        Определяет, является ли сообщение названием категории
     """
     async def check(self, message: types.Message):
         categories = await db.fetch_all_categories()

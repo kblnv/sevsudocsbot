@@ -33,7 +33,15 @@ async def init():
         )
         """
     )
-    
+
+    await con.execute(
+        """CREATE TABLE IF NOT EXISTS adminID (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tg_id BIGINT UNIQUE NOT NULL
+        )
+        """
+    )
+
     # Чтобы нормально работало удаление категории (со всеми дочерними вопросами)
     await con.execute("""PRAGMA foreign_keys = ON""")
 
@@ -51,6 +59,12 @@ async def add_category(category_title: str) -> None:
     await cur.execute("""INSERT INTO categories (category_title) VALUES (?)""", (category_title, ))
     await con.commit()
 
+async def fetch_admin_id() -> list:
+    """ Функция получения всех tgid администраторов """
+    await cur.execute("""SELECT tg_id FROM adminID""")
+    adminID = await cur.fetchall()
+
+    return adminID
 async def fetch_all_questions() -> list:
     await cur.execute("""SELECT * FROM questions""")
     questions = await cur.fetchall()

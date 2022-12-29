@@ -9,12 +9,12 @@ def generate_inline_buttons(markup: InlineKeyboardMarkup, questions: list) -> No
         )
         
 def generate_categories_keyboard_buttons(markup: ReplyKeyboardMarkup, categories: list) -> None:
-    """ Функия генерации кнопок категорий """
+    """ Функция генерации кнопок категорий """
     for (_, title) in categories:
         markup.add(KeyboardButton(text=title))
 
 def generate_questions_keyboard_buttons(markup: ReplyKeyboardMarkup, questions: list) -> None:
-    """ Функия генерации кнопок вопросов """
+    """ Функция генерации кнопок вопросов """
     for (_, _, title, _) in questions:
         markup.add(KeyboardButton(text=title))
 
